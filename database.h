@@ -3,13 +3,16 @@
 #include <QString>
 #include <algorithm>
 #include <qdebug.h>
+#include <QFile>
+#include <QDataStream>
 
 struct Person
 {
     QString name="New Person";
     QString Job="";
     qint16 salary=0;
-    friend QDebug operator<<(QDebug debug, const Person &P);
+    friend QDataStream& operator<<(QDataStream& out, const Person &P);
+    friend QDataStream& operator>>(QDataStream& in, Person &P);
 };
 
 template <class T>
@@ -46,11 +49,42 @@ public:
         M = TmpArr;
         size = TmpSize;
     }
+
     void show()
     {
         for (int i =0; i < size; i++)
         {
             qDebug() << M[i];
+        }
+    }
+
+    void clear()
+    {
+        if (M)
+        {
+            delete[] M;
+            M = nullptr;
+        }
+        size = 0;
+    }
+
+    bool writeIntoFile(const QString& filename)
+    {
+        QFile file(filename);
+        if (!file.open(QIODevice::WriteOnly))
+        {
+            qDebug() << "Error";
+            return false;
+        }
+        else
+        {
+            QDataStream out(&file);
+            for (int i = 0; i < size; i++)
+            {
+                out << M[i];
+            }
+            file.close();
+            return true;
         }
     }
 

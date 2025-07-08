@@ -1,8 +1,17 @@
 #include "database.h"
 
-QDebug operator<<(QDebug debug, const Person &P)
+QDataStream& operator<<(QDataStream& out, const Person &P)
 {
-    QDebugStateSaver saver(debug);
-    debug.nospace() << P.name << P.Job << P.salary;
-    return debug;
+    out << P.name;
+    out << P.Job;
+    out << P.salary;
+    return out;
+}
+
+QDataStream& operator>>(QDataStream& in,  Person &P)
+{
+    in >> P.name;
+    in >> P.Job;
+    in >> P.salary;
+    return in;
 }

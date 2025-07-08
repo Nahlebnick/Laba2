@@ -16,6 +16,8 @@ MainWindow::MainWindow(QWidget *parent)
     ui->FileToolBar->addAction(ui->actionOpen);
     ui->FileToolBar->addAction(ui->actionSave);
     ui->FileToolBar->addAction(ui->actionSave_2);
+
+    modified = false;
 }
 
 MainWindow::~MainWindow()
@@ -26,6 +28,7 @@ MainWindow::~MainWindow()
 //Добавление новой строки в конец таблицы и списка
 void MainWindow::on_NewPersonButton_clicked()
 {
+    modified = true;
     Person tmp;
     tmp.name = QString("New Person");
     m_db.push(tmp);
@@ -49,6 +52,7 @@ void MainWindow::on_NewPersonButton_clicked()
 //Удаление последней строки из конца строки и списка
 void MainWindow::on_DeletePersonButton_clicked()
 {
+    modified = true;
     current_person = m_db.get_size()-1;
 
     m_db.pop();
@@ -90,6 +94,7 @@ void MainWindow::on_listWidget_currentRowChanged(int currentRow)
 
 void MainWindow::on_tableWidget_itemChanged(QTableWidgetItem *item)
 {
+    modified = true;
     if (item->column() == 0)
     {
         m_db[item->row()].name = item->text();
@@ -115,5 +120,84 @@ void MainWindow::on_FindButton_clicked()
 {
     FindDialog* find_dialog = new FindDialog;
     find_dialog->exec();
+}
+
+
+void MainWindow::on_actionNew_triggered()
+{
+    if (maybeSave())
+    {
+        ui->tableWidget->clear();
+        ui->tableWidget->setRowCount(0);
+        ui->tableWidget->setHorizontalHeaderLabels(QStringList() << tr("Фамилия") << tr("Должность") << tr("Зарплата"));
+        ui->listWidget->clear();
+        m_db.clear();
+    }
+}
+
+void MainWindow::on_actionOpen_triggered()
+{
+
+}
+
+void MainWindow::on_actionSave_triggered()
+{
+    if (currFile.isEmpty())
+    {
+        on_actionSave_2_triggered();
+        return;
+    }
+    saveFile(currFile);
+}
+
+void MainWindow::on_actionSave_2_triggered()
+{
+    QString fn = QFileDialog::getSaveFileName(this, tr("Save as..."), QString(), tr("db files (*.db)"));
+    if (fn.isEmpty()) return;
+    if (! (fn.endsWith(".db", Qt::CaseInsensitive))) fn += ".db";
+    setCurrentFileName(fn);
+    on_actionSave_triggered();
+}
+
+bool MainWindow::maybeSave()
+{
+    if (modified) {
+        int ret = QMessageBox::warning(this, tr("Spreadsheet"),
+                                       tr("The document has been modified.\n"
+                                          "Do you want to save your changes?"),
+                                       QMessageBox::Yes | QMessageBox::Default,
+                                       QMessageBox::No,
+                                       QMessageBox::Cancel | QMessageBox::Escape);
+        if (ret == QMessageBox::Yes)
+        {
+            on_actionSave_triggered();
+            return true;
+        }
+        else if (ret == QMessageBox::Cancel)
+            return false;
+    } return true;
+}
+
+bool MainWindow::saveFile(const QString &fileName)
+{
+    if (m_db.writeIntoFile(fileName)) return true;
+    else return false;
+}
+
+void MainWindow::setCurrentFileName(const QString &filename)
+{
+    currFile = filename;
+    modified = false;
+    QString shownName;
+    if (currFile.isEmpty())
+    {
+        shownName = "untitled.db";
+    }
+    else
+    {
+        shownName = QFileInfo(currFile).fileName();
+    }
+    setWindowTitle(tr("%1[*] - %2").arg(shownName).arg(tr("Data Base")));
+    setWindowModified(false);
 }
 

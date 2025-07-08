@@ -4,6 +4,8 @@
 #include <QMainWindow>
 #include <QRandomGenerator>
 #include <QTableWidgetItem>
+#include <QMessageBox>
+#include <QFileDialog>
 #include "database.h"
 #include "finddialog.h"
 
@@ -40,10 +42,19 @@ private slots:
 
     void on_FindButton_clicked();
 
+    void on_actionNew_triggered();
+
+    void on_actionOpen_triggered();
+
+    void on_actionSave_triggered();
+
+    void on_actionSave_2_triggered();
+
 private:
     bool maybeSave();
     void loadFile(const QString &fileName);
-    void saveFile(const QString &fileName);
+    bool saveFile(const QString &fileName);
+    void setCurrentFileName(const QString&);
 
     Ui::MainWindow *ui;
 
@@ -51,5 +62,7 @@ private:
 
     Person person;
     int current_person;
+    bool modified;
+    QString currFile;
 };
 #endif // MAINWINDOW_H
