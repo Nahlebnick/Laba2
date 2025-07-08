@@ -55,6 +55,7 @@ private:
     void loadFile(const QString &fileName);
     bool saveFile(const QString &fileName);
     void setCurrentFileName(const QString&);
+    void fillTable();
 
     Ui::MainWindow *ui;
 

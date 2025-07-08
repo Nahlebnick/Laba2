@@ -13,6 +13,8 @@ struct Person
     qint16 salary=0;
     friend QDataStream& operator<<(QDataStream& out, const Person &P);
     friend QDataStream& operator>>(QDataStream& in, Person &P);
+    friend QDebug operator<<(QDebug debug, const Person &P);
+    friend bool operator<(const Person&, const Person&);
 };
 
 template <class T>
@@ -68,6 +70,11 @@ public:
         size = 0;
     }
 
+    void sort_db()
+    {
+        sort(M, M+size, [](T first, T second){return first < second;});
+    }
+
     bool writeIntoFile(const QString& filename)
     {
         QFile file(filename);
@@ -79,9 +86,33 @@ public:
         else
         {
             QDataStream out(&file);
+            out << size;
             for (int i = 0; i < size; i++)
             {
                 out << M[i];
+            }
+            file.close();
+            return true;
+        }
+    }
+
+    bool readFromFile(const QString& filename)
+    {
+        QFile file(filename);
+        if (!file.open(QIODevice::ReadOnly))
+        {
+            qDebug() << "Error";
+            return false;
+        }
+        else
+        {
+            delete[] M;
+            QDataStream in(&file);
+            in >> size;
+            M = new T[size];
+            for (int i = 0; i < size; i++)
+            {
+                in >> M[i];
             }
             file.close();
             return true;
