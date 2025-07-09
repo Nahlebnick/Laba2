@@ -231,14 +231,29 @@ void MainWindow::setCurrentFileName(const QString &filename)
 
 void MainWindow::fillTable()
 {
+    ui->tableWidget->setRowCount(0);
+    ui->listWidget->clear();
+
     int size = m_db.get_size();
     for (int i = 0; i < size; i++)
     {
-        ui->tableWidget->insertRow(i);
-        qDebug() << m_db[i];
-        QTableWidgetItem *dataItem = ui->tableWidget->item(i, 0);
-        dataItem->setText(m_db[i].name);
+        addPersonToTable(m_db[i]);
         ui->listWidget->addItem(m_db[i].name);
     }
     current_person = 0;
+}
+
+void MainWindow::addPersonToTable(const Person &)
+{
+    int row = ui->tableWidget->rowCount();
+    ui->tableWidget->insertRow(row);
+
+    // Добавляем элементы в таблицу
+    QTableWidgetItem* nameItem = new QTableWidgetItem(person.name);
+    QTableWidgetItem* jobItem = new QTableWidgetItem(person.Job);
+    QTableWidgetItem* salaryItem = new QTableWidgetItem(QString::number(person.salary));
+
+    //ui->tableWidget->setItem(row, 0, nameItem);
+    //ui->tableWidget->setItem(row, 1, jobItem);
+    //ui->tableWidget->setItem(row, 2, salaryItem);
 }

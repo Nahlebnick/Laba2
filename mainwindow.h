@@ -56,6 +56,7 @@ private:
     bool saveFile(const QString &fileName);
     void setCurrentFileName(const QString&);
     void fillTable();
+    void addPersonToTable(const Person&);
 
     Ui::MainWindow *ui;
 
