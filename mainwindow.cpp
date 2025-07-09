@@ -50,12 +50,13 @@ void MainWindow::on_NewPersonButton_clicked()
 //Удаление последней строки из конца строки и списка
 void MainWindow::on_DeletePersonButton_clicked()
 {
+    int row = m_db.get_size() - 1;
     modified = true;
-    current_person = m_db.get_size()-1;
 
     m_db.pop();
-    ui->tableWidget->removeRow(current_person);
-    auto *pItem = ui->listWidget->takeItem(current_person+1);
+    ui->tableWidget->removeRow(row);
+    ui->listWidget->setCurrentRow(row);
+    auto *pItem = ui->listWidget->takeItem(row);
     if (pItem)
     {
         qDebug() << pItem->text();
@@ -111,7 +112,7 @@ void MainWindow::on_tableWidget_itemChanged(QTableWidgetItem *item)
 
 void MainWindow::on_SortButton_clicked()
 {
-    m_db.s
+    //m_db.sort_db();
 }
 
 void MainWindow::on_FindButton_clicked()
@@ -129,6 +130,8 @@ void MainWindow::on_actionNew_triggered()
         ui->tableWidget->setHorizontalHeaderLabels(QStringList() << tr("Фамилия") << tr("Должность") << tr("Зарплата"));
         ui->listWidget->clear();
         m_db.clear();
+        ui->DeletePersonButton->setEnabled(false);
+        modified = false;
     }
 }
 
@@ -137,11 +140,11 @@ void MainWindow::on_actionOpen_triggered()
     if (maybeSave())
     {
         ui->tableWidget->clear();
-        ui->tableWidget->setRowCount(0);
+        ui->tableWidget->setColumnCount(3);
         ui->tableWidget->setHorizontalHeaderLabels(QStringList() << tr("Фамилия") << tr("Должность") << tr("Зарплата"));
         ui->listWidget->clear();
         m_db.clear();
-        QString fileName = QFileDialog::getOpenFileName(this);
+        QString fileName = QFileDialog::getOpenFileName(this, tr("Open file"), QString(), tr("db files (*.db)"));
         if (!fileName.isEmpty()) loadFile(fileName);
     }
 }
@@ -176,7 +179,7 @@ bool MainWindow::maybeSave()
                                       "Do you want to save your changes?"),
                                    QMessageBox::Save | QMessageBox::Discard
                                        | QMessageBox::Cancel);
-        if (ret == QMessageBox::Yes)
+        if (ret == QMessageBox::Save)
         {
             on_actionSave_triggered();
             return true;
@@ -198,6 +201,8 @@ void MainWindow::loadFile(const QString &fileName)
     m_db.readFromFile(fileName);
     setCurrentFileName(fileName);
     statusBar()->showMessage(tr("File loaded"), 2000);
+    modified = false;
+    if (m_db.get_size() != 0) ui->DeletePersonButton->setEnabled(true);
     fillTable();
 }
 
@@ -227,13 +232,13 @@ void MainWindow::setCurrentFileName(const QString &filename)
 void MainWindow::fillTable()
 {
     int size = m_db.get_size();
-    ui->tableWidget->setRowCount(size);
     for (int i = 0; i < size; i++)
     {
+        ui->tableWidget->insertRow(i);
         qDebug() << m_db[i];
-        //ui->tableWidget->setItem(i, 0, new QTableWidgetItem(QString("Person")));
+        QTableWidgetItem *dataItem = ui->tableWidget->item(i, 0);
+        dataItem->setText(m_db[i].name);
         ui->listWidget->addItem(m_db[i].name);
     }
     current_person = 0;
 }
-

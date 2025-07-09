@@ -22,6 +22,7 @@ class DataBase
 {
     T *M;
     int size;
+    int MagicNumber = 7615453;
 public:
     DataBase() : size(0), M(nullptr) {}
     ~DataBase() {delete[] M;}
@@ -86,6 +87,7 @@ public:
         else
         {
             QDataStream out(&file);
+            out << (quint32)MagicNumber;
             out << size;
             for (int i = 0; i < size; i++)
             {
@@ -108,6 +110,11 @@ public:
         {
             delete[] M;
             QDataStream in(&file);
+            quint32 magic;
+            in >> magic;
+            if (magic != MagicNumber) {
+                return false;
+            }
             in >> size;
             M = new T[size];
             for (int i = 0; i < size; i++)
