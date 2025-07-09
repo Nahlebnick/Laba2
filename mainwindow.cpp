@@ -33,8 +33,6 @@ void MainWindow::on_NewPersonButton_clicked()
     tmp.name = QString("New Person");
     m_db.push(tmp);
 
-
-
     int i = ui->tableWidget->rowCount();
     ui->tableWidget->insertRow(i);
     //QTableWidgetItem *item = new QTableWidgetItem(tmp.name);
@@ -113,7 +111,7 @@ void MainWindow::on_tableWidget_itemChanged(QTableWidgetItem *item)
 
 void MainWindow::on_SortButton_clicked()
 {
-
+    m_db.s
 }
 
 void MainWindow::on_FindButton_clicked()
@@ -121,7 +119,6 @@ void MainWindow::on_FindButton_clicked()
     FindDialog* find_dialog = new FindDialog;
     find_dialog->exec();
 }
-
 
 void MainWindow::on_actionNew_triggered()
 {
@@ -137,7 +134,16 @@ void MainWindow::on_actionNew_triggered()
 
 void MainWindow::on_actionOpen_triggered()
 {
-
+    if (maybeSave())
+    {
+        ui->tableWidget->clear();
+        ui->tableWidget->setRowCount(0);
+        ui->tableWidget->setHorizontalHeaderLabels(QStringList() << tr("Фамилия") << tr("Должность") << tr("Зарплата"));
+        ui->listWidget->clear();
+        m_db.clear();
+        QString fileName = QFileDialog::getOpenFileName(this);
+        if (!fileName.isEmpty()) loadFile(fileName);
+    }
 }
 
 void MainWindow::on_actionSave_triggered()
@@ -147,6 +153,7 @@ void MainWindow::on_actionSave_triggered()
         on_actionSave_2_triggered();
         return;
     }
+    modified = false;
     saveFile(currFile);
 }
 
@@ -161,13 +168,14 @@ void MainWindow::on_actionSave_2_triggered()
 
 bool MainWindow::maybeSave()
 {
-    if (modified) {
-        int ret = QMessageBox::warning(this, tr("Spreadsheet"),
-                                       tr("The document has been modified.\n"
-                                          "Do you want to save your changes?"),
-                                       QMessageBox::Yes | QMessageBox::Default,
-                                       QMessageBox::No,
-                                       QMessageBox::Cancel | QMessageBox::Escape);
+    if (modified)
+    {
+        QMessageBox::StandardButton ret;
+        ret = QMessageBox::warning(this, tr("Application"),
+                                   tr("The document has been modified.\n"
+                                      "Do you want to save your changes?"),
+                                   QMessageBox::Save | QMessageBox::Discard
+                                       | QMessageBox::Cancel);
         if (ret == QMessageBox::Yes)
         {
             on_actionSave_triggered();
@@ -176,6 +184,21 @@ bool MainWindow::maybeSave()
         else if (ret == QMessageBox::Cancel)
             return false;
     } return true;
+}
+
+void MainWindow::loadFile(const QString &fileName)
+{
+    if (!QFile::exists(fileName))
+    {
+        QMessageBox::warning(this, tr("Application"),
+                             tr("Cannot find file %1:\n%2.")
+                                 .arg(fileName));
+        return;
+    }
+    m_db.readFromFile(fileName);
+    setCurrentFileName(fileName);
+    statusBar()->showMessage(tr("File loaded"), 2000);
+    fillTable();
 }
 
 bool MainWindow::saveFile(const QString &fileName)
@@ -199,5 +222,18 @@ void MainWindow::setCurrentFileName(const QString &filename)
     }
     setWindowTitle(tr("%1[*] - %2").arg(shownName).arg(tr("Data Base")));
     setWindowModified(false);
+}
+
+void MainWindow::fillTable()
+{
+    int size = m_db.get_size();
+    ui->tableWidget->setRowCount(size);
+    for (int i = 0; i < size; i++)
+    {
+        qDebug() << m_db[i];
+        //ui->tableWidget->setItem(i, 0, new QTableWidgetItem(QString("Person")));
+        ui->listWidget->addItem(m_db[i].name);
+    }
+    current_person = 0;
 }
 

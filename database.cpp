@@ -15,3 +15,16 @@ QDataStream& operator>>(QDataStream& in,  Person &P)
     in >> P.salary;
     return in;
 }
+
+QDebug operator<<(QDebug debug, const Person &P)
+{
+    QDebugStateSaver saver(debug);
+    debug.nospace() << P.name << P.Job << P.salary;
+    return debug;
+}
+
+bool operator<(const Person& p1, const Person& p2)
+{
+    int x = QString::compare(p1.name, p2.name, Qt::CaseInsensitive);
+    if ()
+}
