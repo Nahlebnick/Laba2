@@ -63,7 +63,7 @@ public:
 
     void clear()
     {
-        if (M)
+        if (size > 0)
         {
             delete[] M;
             M = nullptr;

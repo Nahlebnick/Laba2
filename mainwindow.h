@@ -56,15 +56,16 @@ private:
     bool saveFile(const QString &fileName);
     void setCurrentFileName(const QString&);
     void fillTable();
-    void addPersonToTable(const Person&);
+    void addPersonToUi(const Person&);
+    void updateDeleteButtonState();
+    void showErrorMessage(const QString&);
 
     Ui::MainWindow *ui;
 
     DataBase<Person> m_db;
 
-    Person person;
-    int current_person;
-    bool modified;
-    QString currFile;
+    int m_current_person;
+    bool m_modified;
+    QString m_current_file;
 };
 #endif // MAINWINDOW_H
