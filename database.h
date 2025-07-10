@@ -73,7 +73,7 @@ public:
 
     void sort_db()
     {
-        sort(M, M+size, [](T first, T second){return first < second;});
+        std::sort(M, M+size, [](T first, T second){return first < second;});
     }
 
     bool writeIntoFile(const QString& filename)
