@@ -44,9 +44,9 @@ void FindDialog::FindButtonClickedSlot()
     bool sens = caseCheckBox->isChecked();
 
     if (FullWordCheckBox->isChecked())
-        emit find_full(text, sens);
+        emit find_full(text, sens, prevInd);
     else
-        emit find(text, sens);
+        emit find(text, sens, prevInd);
 }
 
 void FindDialog::TextChangedSlot(const QString & text)

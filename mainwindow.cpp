@@ -8,16 +8,20 @@ MainWindow::MainWindow(QWidget *parent)
     this->setFixedSize(800, 600);
     ui->setupUi(this);
 
-    ui->tableWidget->setColumnCount(3);
-    ui->tableWidget->setHorizontalHeaderLabels(QStringList() << tr("Фамилия") << tr("Должность") << tr("Зарплата"));
-    current_person = -1;
+    setupTable();
+    m_current_person = -1;
+
+    ui->SortTypeComboBox->addItem(QString("By name"));
+    ui->SortTypeComboBox->addItem(QString("By salary"));
 
     ui->FileToolBar->addAction(ui->actionNew);
     ui->FileToolBar->addAction(ui->actionOpen);
     ui->FileToolBar->addAction(ui->actionSave);
     ui->FileToolBar->addAction(ui->actionSave_2);
 
-    modified = false;
+    m_modified = false;
+    m_sort_flag = true;
+    findDialog = nullptr;
 }
 
 MainWindow::~MainWindow()
@@ -25,52 +29,127 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+void MainWindow::setupTable()
+{
+    QStringList headers;
+    headers << tr("Фамилия") << tr("Должность") << tr("Зарплата");
+    ui->tableWidget->setColumnCount(headers.size());
+    ui->tableWidget->setHorizontalHeaderLabels(headers);
+}
+
+void MainWindow::updateDeleteButtonState()
+{
+    bool hasData = m_db.get_size() > 0;
+    ui->DeletePersonButton->setEnabled(hasData);
+}
+
+void MainWindow::showErrorMessage(const QString &message)
+{
+    QMessageBox::warning(this, tr("Application"), message);
+}
+
+//Find person by Full name
+void MainWindow::FindFullPerson(const QString & name, bool caseSensitive, qint16 startInd)
+{
+    bool found = false;
+    int row;
+    for (int i = 0; i < m_db.get_size(); i++)
+    {
+        int x;
+        if (caseSensitive) x = QString::compare(name, m_db[i].name, Qt::CaseSensitive);
+        else x = QString::compare(name, m_db[i].name, Qt::CaseInsensitive);
+        if (x == 0)
+        {
+            qDebug() << "Jepa";
+            row = i;
+            found = true;
+            break;
+        }
+    }
+
+    if (found)
+    {
+        ui->tableWidget->setCurrentCell(row, 0);
+        ui->listWidget->setCurrentRow(row);
+        m_current_person = row;
+        QMessageBox::information(this, tr("Application"), tr("Person found at string %1").arg(QString::number(row+1)));
+    }
+    else
+    {
+        QMessageBox::information(this, tr("Application"), tr("Person not found"));
+    }
+    findDialog->raise();
+}
+
+//Find person
+void MainWindow::FindPerson(const QString &name, bool caseSensitive, qint16 startInd)
+{
+    bool found = false;
+    int row;
+    for (int i = 0; i < m_db.get_size(); i++)
+    {
+        if (caseSensitive) found = m_db[i].name.contains(name);
+        else found = m_db[i].name.contains(name, Qt::CaseInsensitive);
+        if (found)
+        {
+            row = i;
+            break;
+        }
+    }
+
+    if (found)
+    {
+        ui->tableWidget->setCurrentCell(row, 0);
+        ui->listWidget->setCurrentRow(row);
+        m_current_person = row;
+        QMessageBox::information(this, tr("Application"), tr("Person found at string %1").arg(QString::number(row+1)));
+    }
+    else
+    {
+        QMessageBox::information(this, tr("Application"), tr("Person not found"));
+    }
+    findDialog->raise();
+}
+
 //Добавление новой строки в конец таблицы и списка
 void MainWindow::on_NewPersonButton_clicked()
 {
-    modified = true;
-    Person tmp;
-    tmp.name = QString("New Person");
-    m_db.push(tmp);
+    m_modified = true;
 
-    int i = ui->tableWidget->rowCount();
-    ui->tableWidget->insertRow(i);
-    //QTableWidgetItem *item = new QTableWidgetItem(tmp.name);
-    //ui->tableWidget->setItem(i, 0, item);
-    //ui->listWidget->addItem(m_db[current_person].name);
+    Person newPerson;
+    newPerson.name = QString("New Person");
+    m_db.push(newPerson);
 
-    ui->listWidget->addItem(tmp.name);
-
-    if (!ui->DeletePersonButton->isEnabled())
-    {
-        ui->DeletePersonButton->setEnabled(true);
-    }
+    addPersonToUi(newPerson);
+    updateDeleteButtonState();
 }
 
 //Удаление последней строки из конца строки и списка
 void MainWindow::on_DeletePersonButton_clicked()
 {
+    if (m_db.get_size() == 0)
+        return;
+
     int row = m_db.get_size() - 1;
-    modified = true;
+    m_modified = true;
 
     m_db.pop();
+
     ui->tableWidget->removeRow(row);
-    ui->listWidget->setCurrentRow(row);
-    auto *pItem = ui->listWidget->takeItem(row);
+
+    QListWidgetItem* pItem = ui->listWidget->takeItem(row);
     if (pItem)
     {
-        qDebug() << pItem->text();
         delete pItem;
     }
 
-    //ui->listWidget->setCurrentRow(current_person);
-    //ui->tableWidget->setCurrentCell(current_person, 0);
-    if (m_db.get_size() < 1) ui->DeletePersonButton->setEnabled(false);
+    m_current_person = qMin(row, m_db.get_size() - 1);
+    updateDeleteButtonState();
 }
 
 void MainWindow::on_actionExit_triggered()
 {
-    QApplication::quit();
+    if (maybeSave()) QApplication::quit();
 }
 
 void MainWindow::on_pushButton_3_clicked()
@@ -81,57 +160,85 @@ void MainWindow::on_pushButton_3_clicked()
 
 void MainWindow::on_tableWidget_currentCellChanged(int currentRow, int currentColumn, int previousRow, int previousColumn)
 {
-    current_person = currentRow;
-    ui->listWidget->setCurrentRow(current_person);
+    m_current_person = currentRow;
+    ui->listWidget->setCurrentRow(m_current_person);
 }
 
 void MainWindow::on_listWidget_currentRowChanged(int currentRow)
 {
-    current_person = currentRow;
+    m_current_person = currentRow;
     ui->tableWidget->setCurrentCell(currentRow, 0);
 }
 
 void MainWindow::on_tableWidget_itemChanged(QTableWidgetItem *item)
 {
-    modified = true;
-    if (item->column() == 0)
-    {
-        m_db[item->row()].name = item->text();
-        QListWidgetItem* list_item = ui->listWidget->item(current_person);
-        list_item->setText(item->text());
-    }
-    else if (item->column() == 1)
-    {
-        m_db[item->row()].Job = item->text();
-    }
-    else if (item->column() == 2)
-    {
-        m_db[item->row()].salary = item->text().toInt();
+    m_modified = true;
+    Person& person = m_db[m_current_person];
+
+    switch (item->column()) {
+    case 0: // Name
+        person.name = item->text();
+        ui->listWidget->item(m_current_person)->setText(item->text());
+        break;
+    case 1: // Job
+        person.Job = item->text();
+        break;
+    case 2: // Salary
+        person.salary = item->text().toInt();
+        break;
     }
 }
 
 void MainWindow::on_SortButton_clicked()
 {
-    //m_db.sort_db();
+    ui->tableWidget->clearContents();
+    ui->tableWidget->setRowCount(0);
+    setupTable();
+
+    ui->listWidget->clear();
+    if (m_sort_flag)
+    {
+        m_sort_flag = false;
+        m_db.sort_db_up();
+    }
+    else
+    {
+        m_sort_flag = true;
+        m_db.sort_db_down();
+    }
+    fillTable();
 }
 
 void MainWindow::on_FindButton_clicked()
 {
-    FindDialog* find_dialog = new FindDialog;
-    find_dialog->exec();
+    if (!findDialog)
+    {
+        findDialog = new FindDialog;
+        connect(findDialog, SIGNAL(find(QString,bool,qint16)), this, SLOT(FindPerson(QString,bool,qint16)));
+        connect(findDialog, SIGNAL(find_full(QString,bool,qint16)), this, SLOT(FindFullPerson(QString,bool,qint16)));
+    }
+    findDialog->show();
+    findDialog->raise();
+    //delete findDialog;
 }
 
 void MainWindow::on_actionNew_triggered()
 {
     if (maybeSave())
     {
-        ui->tableWidget->clear();
+        ui->tableWidget->clearContents();
         ui->tableWidget->setRowCount(0);
-        ui->tableWidget->setHorizontalHeaderLabels(QStringList() << tr("Фамилия") << tr("Должность") << tr("Зарплата"));
+        setupTable();
+
         ui->listWidget->clear();
         m_db.clear();
-        ui->DeletePersonButton->setEnabled(false);
-        modified = false;
+
+        m_current_person = -1;
+        m_modified = false;
+        m_current_file.clear();
+
+        setWindowTitle(tr("untitled.db[*] - Data Base"));
+        updateDeleteButtonState();
     }
 }
 
@@ -139,25 +246,31 @@ void MainWindow::on_actionOpen_triggered()
 {
     if (maybeSave())
     {
-        ui->tableWidget->clear();
-        ui->tableWidget->setColumnCount(3);
-        ui->tableWidget->setHorizontalHeaderLabels(QStringList() << tr("Фамилия") << tr("Должность") << tr("Зарплата"));
-        ui->listWidget->clear();
-        m_db.clear();
         QString fileName = QFileDialog::getOpenFileName(this, tr("Open file"), QString(), tr("db files (*.db)"));
-        if (!fileName.isEmpty()) loadFile(fileName);
+        if (!fileName.isEmpty())
+        {
+            ui->tableWidget->clear();
+            ui->tableWidget->setRowCount(0);
+            setupTable();
+            ui->listWidget->clear();
+            m_db.clear();
+            qDebug() << 11;
+            loadFile(fileName);
+        }
     }
 }
 
 void MainWindow::on_actionSave_triggered()
 {
-    if (currFile.isEmpty())
+    if (m_current_file.isEmpty())
     {
         on_actionSave_2_triggered();
         return;
     }
-    modified = false;
-    saveFile(currFile);
+    if (saveFile(m_current_file)) {
+        m_modified = false;
+        statusBar()->showMessage(tr("File saved"), 2000);
+    }
 }
 
 void MainWindow::on_actionSave_2_triggered()
@@ -171,11 +284,11 @@ void MainWindow::on_actionSave_2_triggered()
 
 bool MainWindow::maybeSave()
 {
-    if (modified)
+    if (m_modified)
     {
         QMessageBox::StandardButton ret;
         ret = QMessageBox::warning(this, tr("Application"),
-                                   tr("The document has been modified.\n"
+                                   tr("The document has been m_modified.\n"
                                       "Do you want to save your changes?"),
                                    QMessageBox::Save | QMessageBox::Discard
                                        | QMessageBox::Cancel);
@@ -193,37 +306,45 @@ void MainWindow::loadFile(const QString &fileName)
 {
     if (!QFile::exists(fileName))
     {
-        QMessageBox::warning(this, tr("Application"),
-                             tr("Cannot find file %1:\n%2.")
-                                 .arg(fileName));
+        showErrorMessage(tr("Cannot find file %1").arg(fileName));
         return;
     }
-    m_db.readFromFile(fileName);
-    setCurrentFileName(fileName);
-    statusBar()->showMessage(tr("File loaded"), 2000);
-    modified = false;
-    if (m_db.get_size() != 0) ui->DeletePersonButton->setEnabled(true);
-    fillTable();
+    if (m_db.readFromFile(fileName))
+    {
+        setCurrentFileName(fileName);
+        statusBar()->showMessage(tr("File loaded"), 2000);
+        updateDeleteButtonState();
+        fillTable();
+        m_modified = false;
+    }
+    else
+    {
+        showErrorMessage(tr("Failed to load file %1").arg(fileName));
+    }
 }
 
 bool MainWindow::saveFile(const QString &fileName)
 {
     if (m_db.writeIntoFile(fileName)) return true;
-    else return false;
+    else
+    {
+        showErrorMessage(tr("Failed to save file %1").arg(fileName));
+        return false;
+    }
 }
 
 void MainWindow::setCurrentFileName(const QString &filename)
 {
-    currFile = filename;
-    modified = false;
+    m_current_file = filename;
+    m_modified = false;
     QString shownName;
-    if (currFile.isEmpty())
+    if (m_current_file.isEmpty())
     {
         shownName = "untitled.db";
     }
     else
     {
-        shownName = QFileInfo(currFile).fileName();
+        shownName = QFileInfo(m_current_file).fileName();
     }
     setWindowTitle(tr("%1[*] - %2").arg(shownName).arg(tr("Data Base")));
     setWindowModified(false);
@@ -231,29 +352,42 @@ void MainWindow::setCurrentFileName(const QString &filename)
 
 void MainWindow::fillTable()
 {
-    ui->tableWidget->setRowCount(0);
-    ui->listWidget->clear();
-
     int size = m_db.get_size();
     for (int i = 0; i < size; i++)
     {
-        addPersonToTable(m_db[i]);
-        ui->listWidget->addItem(m_db[i].name);
+        addPersonToUi(m_db[i]);
     }
-    current_person = 0;
+    if (m_db.get_size() > 0) m_current_person = 0;
 }
 
-void MainWindow::addPersonToTable(const Person &)
+void MainWindow::addPersonToUi(const Person & person)
 {
     int row = ui->tableWidget->rowCount();
     ui->tableWidget->insertRow(row);
 
+    const QString name = person.name;
+    const QString Job = person.Job;
+    const qint16 salary = person.salary;
+    qDebug()  << name << Job << salary;
     // Добавляем элементы в таблицу
-    QTableWidgetItem* nameItem = new QTableWidgetItem(person.name);
-    QTableWidgetItem* jobItem = new QTableWidgetItem(person.Job);
-    QTableWidgetItem* salaryItem = new QTableWidgetItem(QString::number(person.salary));
+    //QTableWidgetItem* nameItem = new QTableWidgetItem(person.name);
+    //QTableWidgetItem* jobItem = new QTableWidgetItem;
+    //QTableWidgetItem* salaryItem = new QTableWidgetItem;
 
+    //jobItem->setText(Job);
+    //salaryItem->setText(QString::number(salary));
     //ui->tableWidget->setItem(row, 0, nameItem);
     //ui->tableWidget->setItem(row, 1, jobItem);
     //ui->tableWidget->setItem(row, 2, salaryItem);
+
+    // Добавляем в список
+    ui->listWidget->addItem(person.name);
+
+    // Обновляем текущую выбранную персону
+    m_current_person = row;
+}
+
+void MainWindow::on_actionAdd_Person_triggered()
+{
+
 }
