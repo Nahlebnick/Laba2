@@ -15,6 +15,7 @@ struct Person
     friend QDataStream& operator>>(QDataStream& in, Person &P);
     friend QDebug operator<<(QDebug debug, const Person &P);
     friend bool operator<(const Person&, const Person&);
+    friend bool operator>(const Person&, const Person&);
 };
 
 template <class T>
@@ -63,7 +64,7 @@ public:
 
     void clear()
     {
-        if (size > 0)
+        if (M)
         {
             delete[] M;
             M = nullptr;
@@ -71,9 +72,14 @@ public:
         size = 0;
     }
 
-    void sort_db()
+    void sort_db_up()
     {
-        std::sort(M, M+size, [](T first, T second){return first < second;});
+        std::sort(M, M + size, [](T first, T second) { return first < second; });
+    }
+
+    void sort_db_down()
+    {
+        std::sort(M, M + size, [](T first, T second) { return first > second; });
     }
 
     bool writeIntoFile(const QString& filename)
@@ -132,7 +138,7 @@ public:
     {
         if (index < size) return M[index];
         else throw std::exception();
-    }   
+    }
 };
 
 #endif // DATABASE_H

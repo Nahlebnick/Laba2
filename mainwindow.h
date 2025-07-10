@@ -50,6 +50,14 @@ private slots:
 
     void on_actionSave_2_triggered();
 
+    void FindPerson(const QString&, bool, qint16&);
+
+    void FindFullPerson(const QString&, bool, qint16&);
+
+    //void on_actionAdd_Person_triggered();
+
+    //void on_SortTypeComboBox_currentIndexChanged(int index);
+
 private:
     bool maybeSave();
     void loadFile(const QString &fileName);
@@ -57,15 +65,21 @@ private:
     void setCurrentFileName(const QString&);
     void fillTable();
     void addPersonToUi(const Person&);
+    void setupTable();
     void updateDeleteButtonState();
-    void showErrorMessage(const QString&);
+    void showErrorMessage(const QString& message);
+
+    void SortBySalaryDown();
+    void SortBySalaryUp();
 
     Ui::MainWindow *ui;
 
     DataBase<Person> m_db;
-
+    FindDialog* findDialog;
     int m_current_person;
     bool m_modified;
+    bool m_sort_flag;
     QString m_current_file;
+
 };
 #endif // MAINWINDOW_H

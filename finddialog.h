@@ -15,8 +15,8 @@ public:
     FindDialog(QWidget *parent = nullptr);
 
 signals:
-    void find(const QString &str, bool caseSensitive);
-    void find_full(const QString &str, bool caseSensitive);
+    void find(const QString &str, bool caseSensitive, qint16&);
+    void find_full(const QString &str, bool caseSensitive, qint16&);
 private slots:
     void FindButtonClickedSlot();
     void TextChangedSlot(const QString&);
@@ -27,6 +27,7 @@ private:
     QCheckBox *FullWordCheckBox;
     QPushButton *findButton;
     QPushButton *closeButton;
+    qint16 prevInd = 0;
 };
 
 #endif // FINDDIALOG_H

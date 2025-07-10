@@ -29,3 +29,10 @@ bool operator<(const Person& p1, const Person& p2)
     if (x < 0) return true;
     return false;
 }
+
+bool operator>(const Person& p1, const Person& p2)
+{
+    int x = QString::compare(p1.name, p2.name, Qt::CaseInsensitive);
+    if (x > 0) return true;
+    return false;
+}
